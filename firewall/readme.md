@@ -91,6 +91,7 @@ sudo nano /etc/network/interfaces
 - configuraciones para ips estaticas de la red Intranet(interna) y la externa que comunicara con el proxy
 
 ------------------------------------
+```
 auto lo
 iface lo inet loopback
 
@@ -105,6 +106,7 @@ auto enx00e04c360079    # cambiar por interfaz conectada con el proxy
 iface enx00e04c360079 inet static
 address 10.0.2.1        # ip de sub red con el proxy y firewall
 netmask 255.255.255.252
+```
 
 ----------------------------------
 
