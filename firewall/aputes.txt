@@ -1,0 +1,7 @@
+-> no perder conxion internet cuando conectas cable de red
+# ip route
+ver metricas, la mayor es la de menor preoridad
+# sudo ip route replace 192.168.0.0/24 dev enp0s20f0u1 metric 700
+darle mas metrica
+# sudo ip route del 192.168.0.0/24 dev enp0s20f0u1 metric 100
+eliminar si se duplica
