@@ -51,7 +51,34 @@ Permitir el tráfico de retorno desde el router hacia la máquina administradora
 sudo iptables -A FORWARD -i wlp9s0 -o enp8s0 -m state --state RELATED,ESTABLISHED -j ACCEPT
 
 ```
+- Nota: para acceder a internet, en la maquina administradora configurar el DNS
 
+```
+sudo nano /etc/resolv.conf
+
+```
+Añade el servidor DNS de Google: Asegúrate de que el archivo contenga una línea como esta:
+
+```
+nameserver 8.8.8.8
+
+```
+### otros
+
+
+```
+
+sudo nft add table ip nat
+sudo nft add chain ip nat postrouting { type nat hook postrouting priority 100 \; }
+sudo nft add rule ip nat postrouting oif "wlp9s0" masquerade
+
+sudo nft add rule ip $TABLE forward iif "enp8s0" oif "wlp9s0" ip protocol icmp accept
+sudo nft add rule ip $TABLE forward iif "wlp9s0" oif "enp8s0" ip protocol icmp accept
+sudo nft add rule ip $TABLE input ip protocol icmp accept
+
+```
+sudo nft list ruleset
+sudo nft list ruleset > /etc/nftables.conf
 
 - hacer que los scripts sean ejecutables
 
