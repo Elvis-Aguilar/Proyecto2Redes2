@@ -23,8 +23,11 @@ nft add chain ip $TABLE forward { type filter hook forward priority 0\; }
 # Permitir siempre SSH desde la MAC de la máquina administradora
 nft add rule ip $TABLE input iif $INTERFACE_ETH ether saddr $ADMIN_MAC tcp dport 22 accept
 
-# Permitir tráfico ICMP (ping) dentro del firewall (para hacer ping al firewall)
-nft add rule ip $TABLE input ip protocol icmp accept
+# Permitir tráfico ICMP (ping) solo para las MACs permitidas
+nft add rule ip $TABLE input iif $INTERFACE_ETH ether saddr @macs ip protocol icmp accept
+
+# Bloquear el tráfico ICMP para todas las demás MACs
+nft add rule ip $TABLE input iif $INTERFACE_ETH ether saddr != @macs drop
 
 # Permitir tráfico ICMP (ping) entre la máquina administradora y la red del router
 nft add rule ip $TABLE forward iif $INTERFACE_ETH oif $INTERFACE_WIFI ip protocol icmp accept
