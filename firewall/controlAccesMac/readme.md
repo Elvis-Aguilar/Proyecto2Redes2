@@ -36,7 +36,7 @@ sudo iptables -t nat -A POSTROUTING -o wlp9s0 -j MASQUERADE
 
 ```
 
-2. Permitir el tráfico entre las interfaces
+2. Permitir el tráfico entre las interfaces (version iptables, revisar script) -> mejor usar nftables (ver script)
 
 Permitir el tráfico desde la máquina administradora hacia la red del router:
 
@@ -65,19 +65,10 @@ nameserver 8.8.8.8
 ```
 ### otros
 
-
-```
-
-sudo nft add table ip nat
-sudo nft add chain ip nat postrouting { type nat hook postrouting priority 100 \; }
-sudo nft add rule ip nat postrouting oif "wlp9s0" masquerade
-
-sudo nft add rule ip $TABLE forward iif "enp8s0" oif "wlp9s0" ip protocol icmp accept
-sudo nft add rule ip $TABLE forward iif "wlp9s0" oif "enp8s0" ip protocol icmp accept
-sudo nft add rule ip $TABLE input ip protocol icmp accept
-
-```
+- ver configuracion actuales de nftables
 sudo nft list ruleset
+
+-guardar configuraciones haciendo persisten.
 sudo nft list ruleset > /etc/nftables.conf
 
 - hacer que los scripts sean ejecutables
