@@ -1,0 +1,3 @@
+# control del ancho de bada <ip>,<kbps subida>, <kbps bajada>
+#1.1.1.1,128,128
+#2.2.2.2,256,256
