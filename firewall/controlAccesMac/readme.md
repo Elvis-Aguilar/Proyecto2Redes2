@@ -77,6 +77,12 @@ sudo ip route add 10.0.1.0/30 via 192.168.1.36 dev wlp1s0
 - hacer que los scripts sean ejecutables
 
 ```
-chmod +x refresh_macs.sh
+chmod +x name_script.sh
 
+```
+
+- ejecucion de scripts
+
+```
+sudo ./actualizar_red.sh
 ```
