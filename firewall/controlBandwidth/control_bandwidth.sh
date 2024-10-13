@@ -9,6 +9,7 @@ BANDWIDTH_FILE="bw.ip"
 # Limpiar las configuraciones anteriores de `tc`
 echo "Limpiando reglas anteriores de control de tráfico en $INTERFACE..."
 tc qdisc del dev $INTERFACE root 2>/dev/null
+tc qdisc del dev $INTERFACE ingress 2>/dev/null  # Asegura eliminar la configuración de ingress también
 
 # Aplicar una disciplina de cola raíz (root qdisc)
 echo "Aplicando disciplina de cola raíz (HTB)..."
@@ -21,15 +22,15 @@ if [ -f "$BANDWIDTH_FILE" ]; then
             continue  # Ignorar comentarios y líneas vacías
         fi
 
-        echo "Configurando límite de ancho de banda para IP $ip: Subida $up kbps, Bajada $down kbps"
+        echo "Configurando límite de ancho de banda para IP $ip: Subida ${up} kbps, Bajada ${down} kbps"
 
-        # Crear una clase para esta IP en la cola raíz
+        # Crear una clase para esta IP en la cola raíz para controlar la bajada (ingreso)
         tc class add dev $INTERFACE parent 1: classid 1:1 htb rate ${down}kbps
 
-        # Agregar una regla de filtro para esta IP
+        # Agregar una regla de filtro para esta IP (bajada)
         tc filter add dev $INTERFACE protocol ip parent 1:0 prio 1 u32 match ip dst $ip flowid 1:1
 
-        # Configurar la limitación de subida (egres)
+        # Configurar la limitación de subida (egreso) usando netem
         tc qdisc add dev $INTERFACE parent 1:1 handle 10: netem rate ${up}kbps
 
     done < "$BANDWIDTH_FILE"
