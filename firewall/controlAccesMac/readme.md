@@ -71,6 +71,9 @@ sudo nft list ruleset
 -guardar configuraciones haciendo persisten.
 sudo nft list ruleset > /etc/nftables.conf
 
+- ...
+sudo ip route add 10.0.1.0/30 via 192.168.1.36 dev wlp1s0
+
 - hacer que los scripts sean ejecutables
 
 ```
