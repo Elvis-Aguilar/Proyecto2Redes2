@@ -2,9 +2,9 @@
 
 # Definir las variables
 TABLE="Firewall"
-INTERFACE_ETH="enp8s0"  # La interfaz Ethernet conectada a la máquina administradora
-INTERFACE_WIFI="wlp9s0"  # La interfaz Wi-Fi conectada a la red externa
-ADMIN_MAC="00:e0:4c:36:00:89" # Reemplaza con la MAC de tu máquina administradora
+INTERFACE_ETH="enp8s0"  # La interfaz Ethernet a la intranet
+INTERFACE_WIFI="wlp9s0"  # La interfaz Wi-Fi conectada a la red externa (internet)
+ADMIN_MAC="52:54:00:45:74:11" # MAC de la máquina administradora
 FILE="acceso.mac"
 
 # Limpiar las reglas anteriores
@@ -40,27 +40,23 @@ else
     echo "El archivo de MACs está vacío o no existe"
 fi
 
-# Permitir tráfico ICMP (ping) solo para las MACs permitidas en la interfaz Ethernet (input)
-nft add rule ip $TABLE input iif $INTERFACE_ETH ether saddr @macs ip protocol icmp accept
+# Permitir todo el tráfico IP (TCP, UDP, ICMP, etc.) solo para las MACs permitidas
+nft add rule ip $TABLE input iif $INTERFACE_ETH ether saddr @macs accept
 
-# Permitir tráfico entre máquinas a través del router (FORWARD)
-# Solo permitir si la MAC de origen está en la lista permitida
-
-# Tráfico de enp8s0 (red interna) hacia wlp9s0 (red externa)
+# Permitir todo el tráfico entre la red interna y externa solo para las MACs permitidas (FORWARD)
+# Tráfico de enp8s0 (red interna) hacia wlp9s0 (red externa, internet)
 nft add rule ip $TABLE forward iif $INTERFACE_ETH oif $INTERFACE_WIFI ether saddr @macs accept
 
 # Tráfico de wlp9s0 (red externa) hacia enp8s0 (red interna)
 nft add rule ip $TABLE forward iif $INTERFACE_WIFI oif $INTERFACE_ETH ether saddr @macs accept
 
-# Regla de NAT (enmascaramiento) para salir a internet
+# Configuración de NAT (enmascaramiento) solo para las MACs permitidas
 nft add table ip nat
 nft add chain ip nat postrouting { type nat hook postrouting priority 100\; }
-nft add rule ip nat postrouting oif "$INTERFACE_WIFI" masquerade
+nft add rule ip nat postrouting oif "$INTERFACE_WIFI" ip saddr @macs masquerade
 
-# Regla para bloquear todo lo que no esté en la lista de MACs permitidas (input)
+# Regla para bloquear todo lo que no esté en la lista de MACs permitidas (input y forward)
 nft add rule ip $TABLE input iif $INTERFACE_ETH ether saddr != @macs drop
-
-# Regla para bloquear todo lo que no esté en la lista de MACs permitidas (forward)
 nft add rule ip $TABLE forward iif $INTERFACE_ETH ether saddr != @macs drop
 nft add rule ip $TABLE forward iif $INTERFACE_WIFI ether saddr != @macs drop
 
