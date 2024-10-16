@@ -51,11 +51,13 @@ nft add rule ip $TABLE forward iif $INTERFACE_WIFI oif $INTERFACE_ETH ether sadd
 # Bloquear todo el tráfico de MACs no permitidas en FORWARD
 nft add rule ip $TABLE forward ether saddr != @macs drop
 
-# *** Reglas de NAT para permitir salida a internet ***
+# *** Reglas de NAT para permitir salida a internet solo a las MACs permitidas ***
 
-# Configuración de NAT (enmascaramiento) para salir a internet
+# Crear tabla NAT (enmascaramiento)
 nft add table ip nat
-nft add chain ip nat postrouting { type nat hook postrouting priority 100\; }
-nft add rule ip nat postrouting oif "$INTERFACE_WIFI" masquerade
+nft add chain ip nat postrouting { type nat hook postrouting priority 100 \; }
+
+# Regla de NAT solo para las máquinas permitidas en acceso.mac
+nft add rule ip nat postrouting oif "$INTERFACE_WIFI" ip saddr @macs masquerade
 
 echo "Reglas del firewall configuradas con éxito."
