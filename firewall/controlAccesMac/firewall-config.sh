@@ -16,13 +16,16 @@ nft add table ip $TABLE
 # Crear un set para las MACs permitidas
 nft add set ip $TABLE macs { type ether_addr\; }
 
+# Crear un set para las IPs permitidas (que obtendremos de ARP)
+nft add set ip $TABLE ips { type ipv4_addr\; }
+
 # Crear una cadena para el tráfico de entrada (INPUT)
 nft add chain ip $TABLE input { type filter hook input priority 0\; policy drop\; }
 
 # Crear una cadena para el reenvío (FORWARD)
 nft add chain ip $TABLE forward { type filter hook forward priority 0\; policy drop\; }
 
-# Crear una cadena para el tráfico de salida (OUTPUT) por si es necesario
+# Crear una cadena para el tráfico de salida (OUTPUT)
 nft add chain ip $TABLE output { type filter hook output priority 0\; policy accept\; }
 
 # Permitir siempre SSH desde la MAC de la máquina administradora
@@ -34,7 +37,20 @@ if [ -s $FILE ]; then
         if [[ $mac =~ ^#.* || -z $mac ]]; then
             continue  # Ignorar comentarios y líneas vacías
         fi
+
+        # Añadir MAC al conjunto
         nft add element ip $TABLE macs { $mac }
+
+        # Buscar la IP correspondiente a la MAC en la tabla ARP
+        ip=$(ip neigh | grep -i "$mac" | awk '{print $1}')
+
+        if [[ -n $ip ]]; then
+            # Si se encuentra la IP, añadirla al conjunto de IPs permitidas
+            nft add element ip $TABLE ips { $ip }
+            echo "IP $ip asociada a la MAC $mac ha sido permitida."
+        else
+            echo "Advertencia: No se encontró la IP para la MAC $mac en la tabla ARP."
+        fi
     done < $FILE
 else
     echo "El archivo de MACs está vacío o no existe"
@@ -51,13 +67,13 @@ nft add rule ip $TABLE forward iif $INTERFACE_WIFI oif $INTERFACE_ETH ether sadd
 # Bloquear todo el tráfico de MACs no permitidas en FORWARD
 nft add rule ip $TABLE forward ether saddr != @macs drop
 
-# *** Reglas de NAT para permitir salida a internet solo a las MACs permitidas ***
+# *** Reglas de NAT para permitir salida a internet solo a las MACs/IPs permitidas ***
 
 # Crear tabla NAT (enmascaramiento)
 nft add table ip nat
 nft add chain ip nat postrouting { type nat hook postrouting priority 100 \; }
 
-# Regla de NAT solo para las máquinas permitidas en acceso.mac
-nft add rule ip nat postrouting oif "$INTERFACE_WIFI" ip saddr @macs masquerade
+# Regla de NAT solo para las IPs permitidas (resueltas a partir de las MACs)
+nft add rule ip nat postrouting oif "$INTERFACE_WIFI" ip saddr @ips masquerade
 
 echo "Reglas del firewall configuradas con éxito."
