@@ -2,7 +2,7 @@
 
 # Definir las variables
 TABLE="Firewall"
-INTERFACE_ETH="enp8s0"  # La interfaz Ethernet conectada a la intranet
+INTERFACE_ETH="enp8s0"  # La interfaz Ethernet conectada a la red interna (intranet)
 INTERFACE_WIFI="wlp9s0"  # La interfaz Wi-Fi conectada a la red externa (internet)
 ADMIN_MAC="52:54:00:45:74:11" # MAC de la máquina administradora
 FILE="acceso.mac"
@@ -40,24 +40,22 @@ else
     echo "El archivo de MACs está vacío o no existe"
 fi
 
-# Permitir todo el tráfico IP (TCP, UDP, ICMP, etc.) solo para las MACs permitidas
-nft add rule ip $TABLE input iif $INTERFACE_ETH ether saddr @macs accept
+# *** Reglas para permitir tráfico entre red interna y externa ***
 
-# Permitir todo el tráfico entre la red interna y externa solo para las MACs permitidas (FORWARD)
-# Tráfico de enp8s0 (red interna) hacia wlp9s0 (red externa, internet)
+# Permitir tráfico de salida (FORWARD) de las MACs permitidas de la red interna (enp8s0) hacia la red externa (wlp9s0)
 nft add rule ip $TABLE forward iif $INTERFACE_ETH oif $INTERFACE_WIFI ether saddr @macs accept
 
-# Tráfico de wlp9s0 (red externa) hacia enp8s0 (red interna)
+# Permitir tráfico de entrada (FORWARD) de la red externa (wlp9s0) hacia la red interna (enp8s0), solo para las MACs permitidas
 nft add rule ip $TABLE forward iif $INTERFACE_WIFI oif $INTERFACE_ETH ether saddr @macs accept
 
-# Configuración de NAT (enmascaramiento) para que todas las IPs que salen por la interfaz Wi-Fi tengan enmascaramiento
+# Bloquear todo el tráfico de MACs no permitidas en FORWARD
+nft add rule ip $TABLE forward ether saddr != @macs drop
+
+# *** Reglas de NAT para permitir salida a internet ***
+
+# Configuración de NAT (enmascaramiento) para salir a internet
 nft add table ip nat
 nft add chain ip nat postrouting { type nat hook postrouting priority 100\; }
 nft add rule ip nat postrouting oif "$INTERFACE_WIFI" masquerade
-
-# Regla para bloquear todo lo que no esté en la lista de MACs permitidas (input y forward)
-nft add rule ip $TABLE input iif $INTERFACE_ETH ether saddr != @macs drop
-nft add rule ip $TABLE forward iif $INTERFACE_ETH ether saddr != @macs drop
-nft add rule ip $TABLE forward iif $INTERFACE_WIFI ether saddr != @macs drop
 
 echo "Reglas del firewall configuradas con éxito."
