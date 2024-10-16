@@ -2,7 +2,7 @@
 
 # Definir las variables
 TABLE="Firewall"
-INTERFACE_ETH="enp8s0"  # La interfaz Ethernet a la intranet
+INTERFACE_ETH="enp8s0"  # La interfaz Ethernet conectada a la intranet
 INTERFACE_WIFI="wlp9s0"  # La interfaz Wi-Fi conectada a la red externa (internet)
 ADMIN_MAC="52:54:00:45:74:11" # MAC de la máquina administradora
 FILE="acceso.mac"
@@ -50,10 +50,10 @@ nft add rule ip $TABLE forward iif $INTERFACE_ETH oif $INTERFACE_WIFI ether sadd
 # Tráfico de wlp9s0 (red externa) hacia enp8s0 (red interna)
 nft add rule ip $TABLE forward iif $INTERFACE_WIFI oif $INTERFACE_ETH ether saddr @macs accept
 
-# Configuración de NAT (enmascaramiento) solo para las MACs permitidas
+# Configuración de NAT (enmascaramiento) para que todas las IPs que salen por la interfaz Wi-Fi tengan enmascaramiento
 nft add table ip nat
 nft add chain ip nat postrouting { type nat hook postrouting priority 100\; }
-nft add rule ip nat postrouting oif "$INTERFACE_WIFI" ip saddr @macs masquerade
+nft add rule ip nat postrouting oif "$INTERFACE_WIFI" masquerade
 
 # Regla para bloquear todo lo que no esté en la lista de MACs permitidas (input y forward)
 nft add rule ip $TABLE input iif $INTERFACE_ETH ether saddr != @macs drop
