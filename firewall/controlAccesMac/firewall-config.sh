@@ -10,33 +10,40 @@ FILE_MAC="acceso.mac"
 # Limpiar las reglas anteriores
 nft flush ruleset
 
+# *** Habilitar el enrutamiento IP en el sistema ***
+sysctl -w net.ipv4.ip_forward=1
+
 # Crear la tabla de firewall
 nft add table ip $TABLE
 
 # Crear un set para las MACs permitidas en la tabla Firewall
 nft add set ip $TABLE macs { type ether_addr\; }
 
-# Crear una cadena para el trafico de entrada (INPUT)
+# Crear una cadena para el tráfico de entrada (INPUT)
 nft add chain ip $TABLE input { type filter hook input priority 0\; policy drop\; }
 
 # Crear una cadena para el reenvío (FORWARD)
 nft add chain ip $TABLE forward { type filter hook forward priority 0\; policy drop\; }
 
-# Crear una cadena para el trafico de salida (OUTPUT)
+# Crear una cadena para el tráfico de salida (OUTPUT)
 nft add chain ip $TABLE output { type filter hook output priority 0\; policy accept\; }
 
 # Permitir siempre SSH desde la MAC de la máquina administradora
 nft add rule ip $TABLE input iif $INTERFACE_ETH ether saddr $ADMIN_MAC tcp dport 22 accept
 
-# *** Reglas para permitir trafico entre red interna y externa ***
+# *** Reglas para permitir tráfico entre red interna y externa ***
 
-# Permitir trafico de salida (FORWARD) de las MACs permitidas de la red interna (enp8s0) hacia la red externa (wlp9s0)
+# Permitir tráfico de salida (FORWARD) de las MACs permitidas de la red interna (enp8s0) hacia la red externa (wlp9s0)
 nft add rule ip $TABLE forward iif $INTERFACE_ETH oif $INTERFACE_WIFI ether saddr @macs accept
 
-# Permitir trafico de entrada (FORWARD) de la red externa (wlp9s0) hacia la red interna (enp8s0), solo para las MACs permitidas
+# Permitir tráfico de entrada (FORWARD) de la red externa (wlp9s0) hacia la red interna (enp8s0), solo para las MACs permitidas
 nft add rule ip $TABLE forward iif $INTERFACE_WIFI oif $INTERFACE_ETH ether saddr @macs accept
 
-# Bloquear todo el trafico de MACs no permitidas en FORWARD
+# *** Reglas generales de reenvío entre las interfaces ***
+nft add rule ip $TABLE forward iif $INTERFACE_ETH oif $INTERFACE_WIFI accept
+nft add rule ip $TABLE forward iif $INTERFACE_WIFI oif $INTERFACE_ETH accept
+
+# Bloquear todo el tráfico de MACs no permitidas en FORWARD
 nft add rule ip $TABLE forward ether saddr != @macs drop
 
 # *** Reglas de NAT para permitir salida a internet solo a las IPs permitidas ***
@@ -69,10 +76,10 @@ if [ -s $FILE_MAC ]; then
         fi
     done < $FILE_MAC
 else
-    echo "El archivo de MACs esta vacio o no existe"
+    echo "El archivo de MACs está vacío o no existe"
 fi
 
 # Regla de NAT solo para las IPs permitidas
 nft add rule ip nat postrouting oif "$INTERFACE_WIFI" ip saddr @ips masquerade
 
-echo "Reglas del firewall configuradas con exito."
+echo "Reglas del firewall configuradas con éxito."
